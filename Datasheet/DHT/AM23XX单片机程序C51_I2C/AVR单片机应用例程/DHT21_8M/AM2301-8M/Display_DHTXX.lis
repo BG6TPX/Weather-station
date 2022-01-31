@@ -1,0 +1,1098 @@
+                        .module Display_DHTXX.c
+                        .area text(rom, con, rel)
+ 0000                   .dbfile C:\DOCUME~1\Owner\桌面\C\给客户调试板\DHT21_8M\DHT21_8M\Display_DHTXX.c
+ 0000                   .dbfunc e port_init _port_init fV
+                        .even
+ 0000           _port_init::
+ 0000                   .dbline -1
+ 0000                   .dbline 72
+ 0000           ; //ICC-AVR application builder : 2008-4-28 9:22:37
+ 0000           ; // Target : M8
+ 0000           ; // Crystal: 8.0000Mhz
+ 0000           ; /*************************************************************************
+ 0000           ; 程序开发软件：ICC-AVR 
+ 0000           ; 功能：波特率9600 串口发送温湿度数据  
+ 0000           ; 数据格式：湿度高8位 湿度高8位  温度低8位 温度低8位  校验和     
+ 0000           ;    
+ 0000           ;           校验和= 湿度高8位+湿度低8位+温度高8位+温度低8位
+ 0000           ;                 
+ 0000           ; 公司：DHT21
+ 0000           ; 芯片：M8
+ 0000           ; 晶振：外部 8Mhz
+ 0000           ; 创建人： 
+ 0000           ; 创建时间：09.07.03
+ 0000           ; 修改人：
+ 0000           ; 修改时间：
+ 0000           ; 修改原因：
+ 0000           ; **************************************************** **********************/
+ 0000           ; 
+ 0000           ; 
+ 0000           ; #include <iom8v.h>
+ 0000           ; #include <macros.h>
+ 0000           ; typedef unsigned char  U8;       /* defined for unsigned 8-bits integer variable        无符号8位整型变量  */
+ 0000           ; typedef signed   char  S8;       /* defined for signed 8-bits integer variable                  有符号8位整型变量  */
+ 0000           ; typedef unsigned int   U16;      /* defined for unsigned 16-bits integer variable       无符号16位整型变量 */
+ 0000           ; typedef signed   int   S16;      /* defined for signed 16-bits integer variable         有符号16位整型变量 */
+ 0000           ; typedef unsigned long  U32;      /* defined for unsigned 32-bits integer variable       无符号32位整型变量 */
+ 0000           ; typedef signed   long  S32;      /* defined for signed 32-bits integer variable         有符号32位整型变量 */
+ 0000           ; typedef float          F32;      /* single precision floating point variable (32bits) 单精度浮点数（32位长度） */
+ 0000           ; typedef double         F64;      /* double precision floating point variable (64bits) 双精度浮点数（64位长度） */
+ 0000           ; 
+ 0000           ; 
+ 0000           ; /**************************************************************************
+ 0000           ;                     I/O空间定义
+ 0000           ; ***************************************************************************/
+ 0000           ; // B0_IN      DDRB &= ~(1 << PB0)             /*设置输入*/
+ 0000           ; // B0_OUT     DDRB |= (1 << PB0)              /*设置输出*/
+ 0000           ; // B0_CLR     PORTB &= ~(1 << PB0)    /*置低电平*/
+ 0000           ; // B0_SET     PORTB |= (1 << PB0)             /*置高电平*/
+ 0000           ; // B0_R           PINB & (1 <<PB0)            /*读了电平*/
+ 0000           ; 
+ 0000           ;  #define    C4_IN       DDRC &= ~(1 << PC4)           /*设置输入*/
+ 0000           ;  #define    C4_OUT      DDRC |= (1 << PC4)            /*设置输出*/
+ 0000           ;  #define    C4_CLR      PORTC &= ~(1 << PC4)      /*置低电平*/
+ 0000           ;  #define    C4_SET      PORTC |= (1 << PC4)           /*置高电平*/
+ 0000           ;  #define    C4_R          PINC & (1 <<PC4)            /*读了电平*/
+ 0000           ; 
+ 0000           ; /**************************************************************************
+ 0000           ;                     通讯I/O空间定义
+ 0000           ; ***************************************************************************/
+ 0000           ;  #define       COM_IN          C4_IN  
+ 0000           ;  #define       COM_OUT         C4_OUT
+ 0000           ;  #define       COM_CLR         C4_CLR
+ 0000           ;  #define       COM_SET         C4_SET
+ 0000           ;  #define       COM_R           C4_R
+ 0000           ;  
+ 0000           ; /**************************************************************************
+ 0000           ;                     全局变量定义区
+ 0000           ; ***************************************************************************/
+ 0000           ;       U8       i;
+ 0000           ;       U8    U8FLAG,k;
+ 0000           ;       U8    U8count,U8temp;
+ 0000           ;       U8    U8T_data_H,U8T_data_L,U8RH_data_H,U8RH_data_L,U8checkdata;
+ 0000           ;       U8    U8T_data_H_temp,U8T_data_L_temp,U8RH_data_H_temp,U8RH_data_L_temp,U8checkdata_temp;
+ 0000           ;       U8    U8comdata;
+ 0000           ;       U16   ReceiveHighByte;
+ 0000           ;       U16   ReceiveLowByte;
+ 0000           ; /**************************************************************************
+ 0000           ; ***************************************************************************/
+ 0000           ; void port_init(void)
+ 0000           ; {
+ 0000                   .dbline 73
+ 0000           ;  PORTB = 0x00;
+ 0000 2224              clr R2
+ 0002 28BA              out 0x18,R2
+ 0004                   .dbline 74
+ 0004           ;  DDRB  = 0xFF;
+ 0004 8FEF              ldi R24,255
+ 0006 87BB              out 0x17,R24
+ 0008                   .dbline 75
+ 0008           ;  PORTC = 0x03;                    
+ 0008 83E0              ldi R24,3
+ 000A 85BB              out 0x15,R24
+ 000C                   .dbline 76
+ 000C           ;  DDRC  = 0x0C;
+ 000C 8CE0              ldi R24,12
+ 000E 84BB              out 0x14,R24
+ 0010                   .dbline 77
+ 0010           ;  PORTD = 0x00;
+ 0010 22BA              out 0x12,R2
+ 0012                   .dbline 78
+ 0012           ;  DDRD  = 0xF0;
+ 0012 80EF              ldi R24,240
+ 0014 81BB              out 0x11,R24
+ 0016                   .dbline -2
+ 0016           L1:
+ 0016                   .dbline 0 ; func end
+ 0016 0895              ret
+ 0018                   .dbend
+ 0018                   .dbfunc e watchdog_init _watchdog_init fV
+                        .even
+ 0018           _watchdog_init::
+ 0018                   .dbline -1
+ 0018                   .dbline 82
+ 0018           ; }
+ 0018           ; 
+ 0018           ; void watchdog_init(void)
+ 0018           ; {
+ 0018                   .dbline -2
+ 0018           L2:
+ 0018                   .dbline 0 ; func end
+ 0018 0895              ret
+ 001A                   .dbend
+ 001A                   .dbfunc e Delay _Delay fV
+ 001A           ;              i -> R16,R17
+                        .even
+ 001A           _Delay::
+ 001A                   .dbline -1
+ 001A                   .dbline 89
+ 001A           ;   //WDR();        //this prevents a timout on enabling
+ 001A           ;   //WDTCR = 0x0F; //WATCHDOG ENABLED - dont forget to issue WDRs
+ 001A           ; }
+ 001A           ; 
+ 001A           ; 
+ 001A           ; void Delay(unsigned int i)
+ 001A           ; {
+ 001A           L4:
+ 001A                   .dbline 90
+ 001A           L5:
+ 001A                   .dbline 90
+ 001A           ;       while(i--);
+ 001A 1801              movw R2,R16
+ 001C 0150              subi R16,1
+ 001E 1040              sbci R17,0
+ 0020 2220              tst R2
+ 0022 D9F7              brne L4
+ 0024 3320              tst R3
+ 0026 C9F7              brne L4
+ 0028           X0:
+ 0028                   .dbline -2
+ 0028           L3:
+ 0028                   .dbline 0 ; func end
+ 0028 0895              ret
+ 002A                   .dbsym r i 16 i
+ 002A                   .dbend
+ 002A                   .dbfunc e DelaymS _DelaymS fV
+ 002A           ;              i -> R20,R21
+ 002A           ;            dly -> R16,R17
+                        .even
+ 002A           _DelaymS::
+ 002A 00D0              rcall push_gset1
+ 002C                   .dbline -1
+ 002C                   .dbline 94
+ 002C           ; }
+ 002C           ; 
+ 002C           ; void DelaymS (U16 dly)                   
+ 002C           ; {
+ 002C                   .dbline 96
+ 002C           ;       U16 i;
+ 002C           ;       for ( ; dly>0; dly--)
+ 002C 0CC0              rjmp L11
+ 002E           L8:
+ 002E                   .dbline 97
+ 002E           ;       {
+ 002E                   .dbline 98
+ 002E           ;           WDR();
+ 002E A895              wdr
+ 0030                   .dbline 99
+ 0030 4427              clr R20
+ 0032 5527              clr R21
+ 0034 02C0              rjmp L15
+ 0036           L12:
+ 0036                   .dbline 99
+ 0036           L13:
+ 0036                   .dbline 99
+ 0036 4F5F              subi R20,255  ; offset = 1
+ 0038 5F4F              sbci R21,255
+ 003A           L15:
+ 003A                   .dbline 99
+ 003A 4F35              cpi R20,95
+ 003C E4E0              ldi R30,4
+ 003E 5E07              cpc R21,R30
+ 0040 D0F3              brlo L12
+ 0042                   .dbline 100
+ 0042           L9:
+ 0042                   .dbline 96
+ 0042 0150              subi R16,1
+ 0044 1040              sbci R17,0
+ 0046           L11:
+ 0046                   .dbline 96
+ 0046 0030              cpi R16,0
+ 0048 0107              cpc R16,R17
+ 004A 89F7              brne L8
+ 004C           X1:
+ 004C                   .dbline -2
+ 004C           L7:
+ 004C 00D0              rcall pop_gset1
+ 004E                   .dbline 0 ; func end
+ 004E 0895              ret
+ 0050                   .dbsym r i 20 i
+ 0050                   .dbsym r dly 16 i
+ 0050                   .dbend
+ 0050                   .dbfunc e Delay_10us _Delay_10us fV
+ 0050           ;              i -> R16
+                        .even
+ 0050           _Delay_10us::
+ 0050                   .dbline -1
+ 0050                   .dbline 105
+ 0050           ;               for (i=0; i<1119; i++);        
+ 0050           ;       }
+ 0050           ; }
+ 0050           ; 
+ 0050           ; 
+ 0050           ;        void  Delay_10us(void)
+ 0050           ;       {
+ 0050                   .dbline 107
+ 0050           ;         U8 i;                     
+ 0050           ;         i++;i++;i++;i++;i++;i++;i++;i++;i++;
+ 0050 0395              inc R16
+ 0052                   .dbline 107
+ 0052 0395              inc R16
+ 0054                   .dbline 107
+ 0054 0395              inc R16
+ 0056                   .dbline 107
+ 0056 0395              inc R16
+ 0058                   .dbline 107
+ 0058 0395              inc R16
+ 005A                   .dbline 107
+ 005A 0395              inc R16
+ 005C                   .dbline 107
+ 005C 0395              inc R16
+ 005E                   .dbline 107
+ 005E 0395              inc R16
+ 0060                   .dbline 107
+ 0060 0395              inc R16
+ 0062                   .dbline 108
+ 0062           ;               i++;i++;i++;i++;i++;i++;i++;i++;i++;
+ 0062 0395              inc R16
+ 0064                   .dbline 108
+ 0064 0395              inc R16
+ 0066                   .dbline 108
+ 0066 0395              inc R16
+ 0068                   .dbline 108
+ 0068 0395              inc R16
+ 006A                   .dbline 108
+ 006A 0395              inc R16
+ 006C                   .dbline 108
+ 006C 0395              inc R16
+ 006E                   .dbline 108
+ 006E 0395              inc R16
+ 0070                   .dbline 108
+ 0070 0395              inc R16
+ 0072                   .dbline 108
+ 0072 0395              inc R16
+ 0074                   .dbline 109
+ 0074           ;               i++;i++;i++;i++;i++;i++;i++;i++;i++;
+ 0074 0395              inc R16
+ 0076                   .dbline 109
+ 0076 0395              inc R16
+ 0078                   .dbline 109
+ 0078 0395              inc R16
+ 007A                   .dbline 109
+ 007A 0395              inc R16
+ 007C                   .dbline 109
+ 007C 0395              inc R16
+ 007E                   .dbline 109
+ 007E 0395              inc R16
+ 0080                   .dbline 109
+ 0080 0395              inc R16
+ 0082                   .dbline 109
+ 0082 0395              inc R16
+ 0084                   .dbline 109
+ 0084 0395              inc R16
+ 0086                   .dbline 110
+ 0086           ;               i++;i++;i++;i++;i++;i++;i++;i++;i++;
+ 0086 0395              inc R16
+ 0088                   .dbline 110
+ 0088 0395              inc R16
+ 008A                   .dbline 110
+ 008A 0395              inc R16
+ 008C                   .dbline 110
+ 008C 0395              inc R16
+ 008E                   .dbline 110
+ 008E 0395              inc R16
+ 0090                   .dbline 110
+ 0090 0395              inc R16
+ 0092                   .dbline 110
+ 0092 0395              inc R16
+ 0094                   .dbline 110
+ 0094 0395              inc R16
+ 0096                   .dbline 110
+ 0096 0395              inc R16
+ 0098                   .dbline 111
+ 0098           ;               i++;i++;i++;i++;i++;i++;i++;i++;i++;
+ 0098 0395              inc R16
+ 009A                   .dbline 111
+ 009A 0395              inc R16
+ 009C                   .dbline 111
+ 009C 0395              inc R16
+ 009E                   .dbline 111
+ 009E 0395              inc R16
+ 00A0                   .dbline 111
+ 00A0 0395              inc R16
+ 00A2                   .dbline 111
+ 00A2 0395              inc R16
+ 00A4                   .dbline 111
+ 00A4 0395              inc R16
+ 00A6                   .dbline 111
+ 00A6 0395              inc R16
+ 00A8                   .dbline 111
+ 00A8 0395              inc R16
+ 00AA                   .dbline 112
+ 00AA           ;               i++;i++;i++;i++;i++;i++;i++;i++;i++;
+ 00AA 0395              inc R16
+ 00AC                   .dbline 112
+ 00AC 0395              inc R16
+ 00AE                   .dbline 112
+ 00AE 0395              inc R16
+ 00B0                   .dbline 112
+ 00B0 0395              inc R16
+ 00B2                   .dbline 112
+ 00B2 0395              inc R16
+ 00B4                   .dbline 112
+ 00B4 0395              inc R16
+ 00B6                   .dbline 112
+ 00B6 0395              inc R16
+ 00B8                   .dbline 112
+ 00B8 0395              inc R16
+ 00BA                   .dbline 112
+ 00BA 0395              inc R16
+ 00BC                   .dbline 113
+ 00BC           ;               i++;i++;i++;i++;i++;i++;i++;i++;i++;
+ 00BC 0395              inc R16
+ 00BE                   .dbline 113
+ 00BE 0395              inc R16
+ 00C0                   .dbline 113
+ 00C0 0395              inc R16
+ 00C2                   .dbline 113
+ 00C2 0395              inc R16
+ 00C4                   .dbline 113
+ 00C4 0395              inc R16
+ 00C6                   .dbline 113
+ 00C6 0395              inc R16
+ 00C8                   .dbline 113
+ 00C8 0395              inc R16
+ 00CA                   .dbline 113
+ 00CA 0395              inc R16
+ 00CC                   .dbline 113
+ 00CC 0395              inc R16
+ 00CE                   .dbline 114
+ 00CE           ;               i++;i++;i++;i++;i++;i++;i++;
+ 00CE 0395              inc R16
+ 00D0                   .dbline 114
+ 00D0 0395              inc R16
+ 00D2                   .dbline 114
+ 00D2 0395              inc R16
+ 00D4                   .dbline 114
+ 00D4 0395              inc R16
+ 00D6                   .dbline 114
+ 00D6 0395              inc R16
+ 00D8                   .dbline 114
+ 00D8 0395              inc R16
+ 00DA                   .dbline 114
+ 00DA 0395              inc R16
+ 00DC                   .dbline -2
+ 00DC           L16:
+ 00DC                   .dbline 0 ; func end
+ 00DC 0895              ret
+ 00DE                   .dbsym r i 16 c
+ 00DE                   .dbend
+ 00DE                   .dbfunc e COM _COM fV
+ 00DE           ;              i -> R20
+                        .even
+ 00DE           _COM::
+ 00DE 00D0              rcall push_gset1
+ 00E0                   .dbline -1
+ 00E0                   .dbline 117
+ 00E0           ;        }
+ 00E0           ;         void  COM(void)
+ 00E0           ;       {
+ 00E0                   .dbline 120
+ 00E0           ;      
+ 00E0           ;               U8 i;
+ 00E0           ;        for(i=0;i<8;i++)          
+ 00E0 4427              clr R20
+ 00E2 3FC0              rjmp L21
+ 00E4           L18:
+ 00E4                   .dbline 121
+ 00E4           ;           {
+ 00E4                   .dbline 123
+ 00E4           ;               
+ 00E4           ;                   U8FLAG=2;
+ 00E4 82E0              ldi R24,2
+ 00E6 80931200          sts _U8FLAG,R24
+ 00EA           L22:
+ 00EA                   .dbline 124
+ 00EA           L23:
+ 00EA                   .dbline 124
+ 00EA           ;               while((!(COM_R))&&U8FLAG++);
+ 00EA 9C99              sbic 0x13,4
+ 00EC 09C0              rjmp L25
+ 00EE 20901200          lds R2,_U8FLAG
+ 00F2 3324              clr R3
+ 00F4 822D              mov R24,R2
+ 00F6 8F5F              subi R24,255    ; addi 1
+ 00F8 80931200          sts _U8FLAG,R24
+ 00FC 2220              tst R2
+ 00FE A9F7              brne L22
+ 0100           L25:
+ 0100                   .dbline 125
+ 0100           ;                if(U8FLAG==1)break;
+ 0100 80911200          lds R24,_U8FLAG
+ 0104 8130              cpi R24,1
+ 0106 09F4              brne L26
+ 0108                   .dbline 125
+ 0108 2FC0              rjmp L20
+ 010A           L26:
+ 010A                   .dbline 126
+ 010A           ;                       Delay_10us();
+ 010A A2DF              rcall _Delay_10us
+ 010C                   .dbline 127
+ 010C           ;                       Delay_10us();
+ 010C A1DF              rcall _Delay_10us
+ 010E                   .dbline 128
+ 010E           ;                   Delay_10us();
+ 010E A0DF              rcall _Delay_10us
+ 0110                   .dbline 129
+ 0110           ;                       Delay_10us();
+ 0110 9FDF              rcall _Delay_10us
+ 0112                   .dbline 130
+ 0112           ;                       U8temp=0;
+ 0112 2224              clr R2
+ 0114 20920F00          sts _U8temp,R2
+ 0118                   .dbline 131
+ 0118           ;            if(COM_R)U8temp=1;
+ 0118 9C9B              sbis 0x13,4
+ 011A 03C0              rjmp L28
+ 011C                   .dbline 131
+ 011C 81E0              ldi R24,1
+ 011E 80930F00          sts _U8temp,R24
+ 0122           L28:
+ 0122                   .dbline 132
+ 0122           ;                   U8FLAG=2;
+ 0122 82E0              ldi R24,2
+ 0124 80931200          sts _U8FLAG,R24
+ 0128           L30:
+ 0128                   .dbline 133
+ 0128           L31:
+ 0128                   .dbline 133
+ 0128           ;                  while((COM_R)&&U8FLAG++);
+ 0128 9C9B              sbis 0x13,4
+ 012A 09C0              rjmp L33
+ 012C 20901200          lds R2,_U8FLAG
+ 0130 3324              clr R3
+ 0132 822D              mov R24,R2
+ 0134 8F5F              subi R24,255    ; addi 1
+ 0136 80931200          sts _U8FLAG,R24
+ 013A 2220              tst R2
+ 013C A9F7              brne L30
+ 013E           L33:
+ 013E                   .dbline 135
+ 013E           ;               //超时则跳出for循环               
+ 013E           ;                if(U8FLAG==1)break;
+ 013E 80911200          lds R24,_U8FLAG
+ 0142 8130              cpi R24,1
+ 0144 09F4              brne L34
+ 0146                   .dbline 135
+ 0146 10C0              rjmp L20
+ 0148           L34:
+ 0148                   .dbline 140
+ 0148 20900400          lds R2,_U8comdata
+ 014C 220C              lsl R2
+ 014E 20920400          sts _U8comdata,R2
+ 0152                   .dbline 141
+ 0152 20900F00          lds R2,_U8temp
+ 0156 30900400          lds R3,_U8comdata
+ 015A 3228              or R3,R2
+ 015C 30920400          sts _U8comdata,R3
+ 0160                   .dbline 142
+ 0160           L19:
+ 0160                   .dbline 120
+ 0160 4395              inc R20
+ 0162           L21:
+ 0162                   .dbline 120
+ 0162 4830              cpi R20,8
+ 0164 08F4              brsh X2
+ 0166 BECF              rjmp L18
+ 0168           X2:
+ 0168           L20:
+ 0168                   .dbline -2
+ 0168           L17:
+ 0168 00D0              rcall pop_gset1
+ 016A                   .dbline 0 ; func end
+ 016A 0895              ret
+ 016C                   .dbsym r i 20 c
+ 016C                   .dbend
+ 016C                   .dbfunc e RH _RH fV
+                        .even
+ 016C           _RH::
+ 016C                   .dbline -1
+ 016C                   .dbline 160
+ 016C           ;               //判断数据位是0还是1     
+ 016C           ;                  
+ 016C           ;               // 如果高电平高过预定0高电平值则数据位为 1 
+ 016C           ;                
+ 016C           ;                  U8comdata<<=1;
+ 016C           ;                  U8comdata|=U8temp;        //0
+ 016C           ;            }//rof
+ 016C           ;          
+ 016C           ;       }
+ 016C           ; 
+ 016C           ;       //--------------------------------
+ 016C           ;       //-----湿度读取子程序 ------------
+ 016C           ;       //--------------------------------
+ 016C           ;       //----以下变量均为全局变量--------
+ 016C           ;       //----温度高8位== U8T_data_H------
+ 016C           ;       //----温度低8位== U8T_data_L------
+ 016C           ;       //----湿度高8位== U8RH_data_H-----
+ 016C           ;       //----湿度低8位== U8RH_data_L-----
+ 016C           ;       //----校验 8位 == U8checkdata-----
+ 016C           ;       //----调用相关子程序如下----------
+ 016C           ;       //---- Delay();, Delay_10us();,COM(); 
+ 016C           ;       //--------------------------------
+ 016C           ; 
+ 016C           ;       void RH(void)
+ 016C           ;       {
+ 016C                   .dbline 163
+ 016C           ;        
+ 016C           ;         //主机拉低18ms 
+ 016C           ;        COM_OUT;
+ 016C A49A              sbi 0x14,4
+ 016E                   .dbline 164
+ 016E           ;        COM_CLR;
+ 016E AC98              cbi 0x15,4
+ 0170                   .dbline 165
+ 0170           ;          DelaymS(1);
+ 0170 01E0              ldi R16,1
+ 0172 10E0              ldi R17,0
+ 0174 5ADF              rcall _DelaymS
+ 0176                   .dbline 166
+ 0176           ;          COM_IN;
+ 0176 A498              cbi 0x14,4
+ 0178                   .dbline 167
+ 0178           ;          COM_SET;
+ 0178 AC9A              sbi 0x15,4
+ 017A                   .dbline 170
+ 017A           ;         
+ 017A           ;        //总线由上拉电阻拉高 主机延时20us
+ 017A           ;          Delay_10us();
+ 017A 6ADF              rcall _Delay_10us
+ 017C                   .dbline 171
+ 017C           ;          Delay_10us();
+ 017C 69DF              rcall _Delay_10us
+ 017E                   .dbline 172
+ 017E           ;          Delay_10us();
+ 017E 68DF              rcall _Delay_10us
+ 0180                   .dbline 173
+ 0180           ;          Delay_10us();
+ 0180 67DF              rcall _Delay_10us
+ 0182                   .dbline 179
+ 0182           ;        //主机设为输入 判断从机响应信号 
+ 0182           ;        //P2_0=1;
+ 0182           ;        
+ 0182           ;        //判断从机是否有低电平响应信号 如不响应则跳出，响应则向下运行    
+ 0182           ;         // if(!P2_0)           //T !   
+ 0182           ;          if(COM_R)U8FLAG=1;
+ 0182 9C9B              sbis 0x13,4
+ 0184 5DC0              rjmp L40
+ 0186                   .dbline 179
+ 0186 81E0              ldi R24,1
+ 0188 80931200          sts _U8FLAG,R24
+ 018C 59C0              rjmp L40
+ 018E           L39:
+ 018E                   .dbline 181
+ 018E           ;          while(!(COM_R))               
+ 018E           ;          {
+ 018E                   .dbline 182
+ 018E           ;          U8FLAG=2;
+ 018E 82E0              ldi R24,2
+ 0190 80931200          sts _U8FLAG,R24
+ 0194           L42:
+ 0194                   .dbline 185
+ 0194           L43:
+ 0194                   .dbline 185
+ 0194           ;        //判断从机是否发出 80us 的低电平响应信号是否结束        
+ 0194           ;          //while((!P2_0)&&U8FLAG++);
+ 0194           ;          while((!(COM_R))&&U8FLAG++);
+ 0194 9C99              sbic 0x13,4
+ 0196 09C0              rjmp L45
+ 0198 20901200          lds R2,_U8FLAG
+ 019C 3324              clr R3
+ 019E 822D              mov R24,R2
+ 01A0 8F5F              subi R24,255    ; addi 1
+ 01A2 80931200          sts _U8FLAG,R24
+ 01A6 2220              tst R2
+ 01A8 A9F7              brne L42
+ 01AA           L45:
+ 01AA                   .dbline 186
+ 01AA           ;          if(U8FLAG==1)break;
+ 01AA 80911200          lds R24,_U8FLAG
+ 01AE 8130              cpi R24,1
+ 01B0 09F4              brne L46
+ 01B2                   .dbline 186
+ 01B2 48C0              rjmp L41
+ 01B4           L46:
+ 01B4                   .dbline 187
+ 01B4           ;          U8FLAG=2;
+ 01B4 82E0              ldi R24,2
+ 01B6 80931200          sts _U8FLAG,R24
+ 01BA           L48:
+ 01BA                   .dbline 190
+ 01BA           L49:
+ 01BA                   .dbline 190
+ 01BA           ;        //判断从机是否发出 80us 的高电平，如发出则进入数据接收状态
+ 01BA           ;        //while((P2_0)&&U8FLAG++);
+ 01BA           ;          while((COM_R)&&U8FLAG++);
+ 01BA 9C9B              sbis 0x13,4
+ 01BC 09C0              rjmp L51
+ 01BE 20901200          lds R2,_U8FLAG
+ 01C2 3324              clr R3
+ 01C4 822D              mov R24,R2
+ 01C6 8F5F              subi R24,255    ; addi 1
+ 01C8 80931200          sts _U8FLAG,R24
+ 01CC 2220              tst R2
+ 01CE A9F7              brne L48
+ 01D0           L51:
+ 01D0                   .dbline 191
+ 01D0           ;          if(U8FLAG==1)break;
+ 01D0 80911200          lds R24,_U8FLAG
+ 01D4 8130              cpi R24,1
+ 01D6 09F4              brne L52
+ 01D8                   .dbline 191
+ 01D8 35C0              rjmp L41
+ 01DA           L52:
+ 01DA                   .dbline 193
+ 01DA           ;        //数据接收状态          
+ 01DA           ;          COM();
+ 01DA 81DF              rcall _COM
+ 01DC                   .dbline 194
+ 01DC           ;          if(U8FLAG==1)break;
+ 01DC 80911200          lds R24,_U8FLAG
+ 01E0 8130              cpi R24,1
+ 01E2 09F4              brne L54
+ 01E4                   .dbline 194
+ 01E4 2FC0              rjmp L41
+ 01E6           L54:
+ 01E6                   .dbline 195
+ 01E6           ;          U8T_data_H_temp=U8comdata;
+ 01E6 20900400          lds R2,_U8comdata
+ 01EA 20920900          sts _U8T_data_H_temp,R2
+ 01EE                   .dbline 196
+ 01EE           ;          COM();
+ 01EE 77DF              rcall _COM
+ 01F0                   .dbline 197
+ 01F0           ;          if(U8FLAG==1)break;
+ 01F0 80911200          lds R24,_U8FLAG
+ 01F4 8130              cpi R24,1
+ 01F6 09F4              brne L56
+ 01F8                   .dbline 197
+ 01F8 25C0              rjmp L41
+ 01FA           L56:
+ 01FA                   .dbline 198
+ 01FA           ;          U8T_data_L_temp=U8comdata; 
+ 01FA 20900400          lds R2,_U8comdata
+ 01FE 20920800          sts _U8T_data_L_temp,R2
+ 0202                   .dbline 199
+ 0202           ;          COM();
+ 0202 6DDF              rcall _COM
+ 0204                   .dbline 200
+ 0204           ;          if(U8FLAG==1)break;
+ 0204 80911200          lds R24,_U8FLAG
+ 0208 8130              cpi R24,1
+ 020A 09F4              brne L58
+ 020C                   .dbline 200
+ 020C 1BC0              rjmp L41
+ 020E           L58:
+ 020E                   .dbline 201
+ 020E           ;          U8RH_data_H_temp=U8comdata;
+ 020E 20900400          lds R2,_U8comdata
+ 0212 20920700          sts _U8RH_data_H_temp,R2
+ 0216                   .dbline 202
+ 0216           ;          COM();
+ 0216 63DF              rcall _COM
+ 0218                   .dbline 203
+ 0218           ;          if(U8FLAG==1)break;
+ 0218 80911200          lds R24,_U8FLAG
+ 021C 8130              cpi R24,1
+ 021E 09F4              brne L60
+ 0220                   .dbline 203
+ 0220 11C0              rjmp L41
+ 0222           L60:
+ 0222                   .dbline 204
+ 0222           ;          U8RH_data_L_temp=U8comdata;
+ 0222 20900400          lds R2,_U8comdata
+ 0226 20920600          sts _U8RH_data_L_temp,R2
+ 022A                   .dbline 205
+ 022A           ;          COM();
+ 022A 59DF              rcall _COM
+ 022C                   .dbline 206
+ 022C           ;          if(U8FLAG==1)break;
+ 022C 80911200          lds R24,_U8FLAG
+ 0230 8130              cpi R24,1
+ 0232 09F4              brne L62
+ 0234                   .dbline 206
+ 0234 07C0              rjmp L41
+ 0236           L62:
+ 0236                   .dbline 207
+ 0236 20900400          lds R2,_U8comdata
+ 023A 20920500          sts _U8checkdata_temp,R2
+ 023E                   .dbline 208
+ 023E 02C0              rjmp L41
+ 0240           L40:
+ 0240                   .dbline 180
+ 0240 9C9B              sbis 0x13,4
+ 0242 A5CF              rjmp L39
+ 0244           L41:
+ 0244                   .dbline 211
+ 0244           ;          U8checkdata_temp=U8comdata;
+ 0244           ;          break;
+ 0244           ;           }//while
+ 0244           ;          //P2_0=1;
+ 0244           ;          COM_IN;
+ 0244 A498              cbi 0x14,4
+ 0246                   .dbline 212
+ 0246           ;          COM_SET;
+ 0246 AC9A              sbi 0x15,4
+ 0248                   .dbline 215
+ 0248           ;        //数据校验 
+ 0248           ;        
+ 0248           ;          U8temp=(U8T_data_H_temp+U8T_data_L_temp+U8RH_data_H_temp+U8RH_data_L_temp);
+ 0248 20900800          lds R2,_U8T_data_L_temp
+ 024C 30900900          lds R3,_U8T_data_H_temp
+ 0250 320C              add R3,R2
+ 0252 20900700          lds R2,_U8RH_data_H_temp
+ 0256 320C              add R3,R2
+ 0258 20900600          lds R2,_U8RH_data_L_temp
+ 025C 320C              add R3,R2
+ 025E 30920F00          sts _U8temp,R3
+ 0262                   .dbline 216
+ 0262           ;          if(U8temp==U8checkdata_temp)
+ 0262 20900500          lds R2,_U8checkdata_temp
+ 0266 3214              cp R3,R2
+ 0268 A1F4              brne L64
+ 026A                   .dbline 217
+ 026A           ;          {
+ 026A                   .dbline 218
+ 026A           ;                 U8RH_data_H=U8T_data_H_temp;
+ 026A 20900900          lds R2,_U8T_data_H_temp
+ 026E 20920C00          sts _U8RH_data_H,R2
+ 0272                   .dbline 219
+ 0272           ;                 U8RH_data_L=U8T_data_L_temp;
+ 0272 20900800          lds R2,_U8T_data_L_temp
+ 0276 20920B00          sts _U8RH_data_L,R2
+ 027A                   .dbline 220
+ 027A           ;                 U8T_data_H=U8RH_data_H_temp;
+ 027A 20900700          lds R2,_U8RH_data_H_temp
+ 027E 20920E00          sts _U8T_data_H,R2
+ 0282                   .dbline 221
+ 0282           ;                 U8T_data_L=U8RH_data_L_temp;
+ 0282 20900600          lds R2,_U8RH_data_L_temp
+ 0286 20920D00          sts _U8T_data_L,R2
+ 028A                   .dbline 222
+ 028A           ;                 U8checkdata=U8checkdata_temp;
+ 028A 20900500          lds R2,_U8checkdata_temp
+ 028E 20920A00          sts _U8checkdata,R2
+ 0292                   .dbline 223
+ 0292           ;          }//fi
+ 0292           L64:
+ 0292                   .dbline 226
+ 0292           ;         
+ 0292           ;         
+ 0292           ;          COM_IN;
+ 0292 A498              cbi 0x14,4
+ 0294                   .dbline 227
+ 0294           ;          COM_SET;
+ 0294 AC9A              sbi 0x15,4
+ 0296                   .dbline -2
+ 0296           L36:
+ 0296                   .dbline 0 ; func end
+ 0296 0895              ret
+ 0298                   .dbend
+ 0298                   .dbfunc e Uart_Init _Uart_Init fV
+                        .even
+ 0298           _Uart_Init::
+ 0298                   .dbline -1
+ 0298                   .dbline 238
+ 0298           ; 
+ 0298           ;       }
+ 0298           ;       
+ 0298           ; /*
+ 0298           ; 串口初始化函数
+ 0298           ; 系统频率：2MHz
+ 0298           ; 停止位：1
+ 0298           ; 波特率：9600
+ 0298           ; 数据长度：8
+ 0298           ; */
+ 0298           ; void Uart_Init(void) {
+ 0298                   .dbline 239
+ 0298           ;       UCSRA = 0x02;           /*2倍速                                  */
+ 0298 82E0              ldi R24,2
+ 029A 8BB9              out 0xb,R24
+ 029C                   .dbline 240
+ 029C           ;       UCSRB = 0x18;           /*允许接收和发送*/
+ 029C 88E1              ldi R24,24
+ 029E 8AB9              out 0xa,R24
+ 02A0                   .dbline 241
+ 02A0           ;       UCSRC = 0x06;           /*8位数据                                */
+ 02A0 86E0              ldi R24,6
+ 02A2 80BD              out 0x20,R24
+ 02A4                   .dbline 242
+ 02A4           ;       UBRRH = 0x00;
+ 02A4 2224              clr R2
+ 02A6 20BC              out 0x20,R2
+ 02A8                   .dbline 245
+ 02A8           ;       //UBRRL = 47;           /*9600          3.6864M      */  
+ 02A8           ;       //UBRRL = 95;       /*9600          7.3728M      */ 
+ 02A8           ;       UBRRL = 103;        /*9600          8.0000M      */ 
+ 02A8 87E6              ldi R24,103
+ 02AA 89B9              out 0x9,R24
+ 02AC                   .dbline -2
+ 02AC           L66:
+ 02AC                   .dbline 0 ; func end
+ 02AC 0895              ret
+ 02AE                   .dbend
+ 02AE                   .dbfunc e Uart_Transmit _Uart_Transmit fV
+ 02AE           ;              i -> R16
+                        .even
+ 02AE           _Uart_Transmit::
+ 02AE                   .dbline -1
+ 02AE                   .dbline 252
+ 02AE           ; }
+ 02AE           ; 
+ 02AE           ; /*
+ 02AE           ; 串数据发送
+ 02AE           ; 查询方式发送
+ 02AE           ; */
+ 02AE           ; void Uart_Transmit(unsigned char i) {
+ 02AE           L68:
+ 02AE                   .dbline 255
+ 02AE           L69:
+ 02AE                   .dbline 255
+ 02AE           ; 
+ 02AE           ;       /* 等待发送缓冲器为空*/
+ 02AE           ;       while (!(UCSRA & (1<<UDRE)));
+ 02AE 5D9B              sbis 0xb,5
+ 02B0 FECF              rjmp L68
+ 02B2                   .dbline 257
+ 02B2           ;       /* 将数据放入缓冲器，发送数据*/
+ 02B2           ;       UDR = i;
+ 02B2 0CB9              out 0xc,R16
+ 02B4                   .dbline -2
+ 02B4           L67:
+ 02B4                   .dbline 0 ; func end
+ 02B4 0895              ret
+ 02B6                   .dbsym r i 16 c
+ 02B6                   .dbend
+ 02B6                   .dbfunc e Uart_Receive _Uart_Receive fc
+                        .even
+ 02B6           _Uart_Receive::
+ 02B6                   .dbline -1
+ 02B6                   .dbline 264
+ 02B6           ; }
+ 02B6           ; 
+ 02B6           ; /*
+ 02B6           ; 串数据接收
+ 02B6           ; 查询方式接收
+ 02B6           ; */
+ 02B6           ; unsigned char Uart_Receive( void ) {
+ 02B6           L72:
+ 02B6                   .dbline 267
+ 02B6           L73:
+ 02B6                   .dbline 267
+ 02B6           ; 
+ 02B6           ;       /* 等待接收数据*/
+ 02B6           ;       while (!(UCSRA & (1<<RXC)));
+ 02B6 5F9B              sbis 0xb,7
+ 02B8 FECF              rjmp L72
+ 02BA                   .dbline 270
+ 02BA           ;       /* 从缓冲器中获取并返回数据*/
+ 02BA           ;       // Uart_Transmit(UDR);
+ 02BA           ;       return UDR;
+ 02BA 0CB1              in R16,0xc
+ 02BC                   .dbline -2
+ 02BC           L71:
+ 02BC                   .dbline 0 ; func end
+ 02BC 0895              ret
+ 02BE                   .dbend
+ 02BE                   .dbfunc e init_devices _init_devices fV
+ 02BE           ;              i -> <dead>
+                        .even
+ 02BE           _init_devices::
+ 02BE                   .dbline -1
+ 02BE                   .dbline 274
+ 02BE           ; }
+ 02BE           ; 
+ 02BE           ; void init_devices(void) 
+ 02BE           ; {
+ 02BE                   .dbline 276
+ 02BE           ; unsigned char i;
+ 02BE           ;                  CLI();                     
+ 02BE F894              cli
+ 02C0                   .dbline 277
+ 02C0           ;      port_init();
+ 02C0 9FDE              rcall _port_init
+ 02C2                   .dbline 278
+ 02C2           ;  watchdog_init();
+ 02C2 AADE              rcall _watchdog_init
+ 02C4                   .dbline 279
+ 02C4           ;     Uart_Init();
+ 02C4 E9DF              rcall _Uart_Init
+ 02C6                   .dbline 280
+ 02C6           ;     MCUCR = 0x03;
+ 02C6 83E0              ldi R24,3
+ 02C8 85BF              out 0x35,R24
+ 02CA                   .dbline 281
+ 02CA           ;     GICR  = 0x00;                //关外部中断0
+ 02CA 2224              clr R2
+ 02CC 2BBE              out 0x3b,R2
+ 02CE                   .dbline 282
+ 02CE           ;     TIMSK = 0x00;                //关定时器1中断
+ 02CE 29BE              out 0x39,R2
+ 02D0                   .dbline 283
+ 02D0           ;            SEI();                //re-enable interrupts
+ 02D0 7894              sei
+ 02D2                   .dbline -2
+ 02D2           L75:
+ 02D2                   .dbline 0 ; func end
+ 02D2 0895              ret
+ 02D4                   .dbsym l i 1 c
+ 02D4                   .dbend
+ 02D4                   .dbfunc e main _main fV
+                        .even
+ 02D4           _main::
+ 02D4                   .dbline -1
+ 02D4                   .dbline 299
+ 02D4           ;                            
+ 02D4           ; }     
+ 02D4           ; /**************************************************************************
+ 02D4           ; 
+ 02D4           ; 
+ 02D4           ; 
+ 02D4           ;                             主函数
+ 02D4           ;                                                       
+ 02D4           ;                                                       
+ 02D4           ;                                                       
+ 02D4           ;                                                       
+ 02D4           ; **************************************************************************/
+ 02D4           ; 
+ 02D4           ; 
+ 02D4           ;  void main(void)
+ 02D4           ; {
+ 02D4                   .dbline 301
+ 02D4           ; 
+ 02D4           ;  init_devices() ;
+ 02D4 F4DF              rcall _init_devices
+ 02D6                   .dbline 302
+ 02D6           ;  COM_IN;
+ 02D6 A498              cbi 0x14,4
+ 02D8                   .dbline 303
+ 02D8           ;  COM_SET;
+ 02D8 AC9A              sbi 0x15,4
+ 02DA 23C0              rjmp L78
+ 02DC           L77:
+ 02DC                   .dbline 306
+ 02DC           ;  
+ 02DC           ;  while(1)
+ 02DC           ;  {
+ 02DC                   .dbline 309
+ 02DC           ;  
+ 02DC           ;  //读DHT21   
+ 02DC           ;   RH();
+ 02DC 47DF              rcall _RH
+ 02DE                   .dbline 312
+ 02DE           ;   
+ 02DE           ;   //由串口发送数据 
+ 02DE           ;   Uart_Transmit(U8RH_data_H); 
+ 02DE 00910C00          lds R16,_U8RH_data_H
+ 02E2 E5DF              rcall _Uart_Transmit
+ 02E4                   .dbline 313
+ 02E4           ;   Uart_Transmit(U8RH_data_L);
+ 02E4 00910B00          lds R16,_U8RH_data_L
+ 02E8 E2DF              rcall _Uart_Transmit
+ 02EA                   .dbline 314
+ 02EA           ;   Uart_Transmit(U8T_data_H);  
+ 02EA 00910E00          lds R16,_U8T_data_H
+ 02EE DFDF              rcall _Uart_Transmit
+ 02F0                   .dbline 315
+ 02F0           ;   Uart_Transmit(U8T_data_L); 
+ 02F0 00910D00          lds R16,_U8T_data_L
+ 02F4 DCDF              rcall _Uart_Transmit
+ 02F6                   .dbline 316
+ 02F6           ;   Uart_Transmit(U8checkdata); 
+ 02F6 00910A00          lds R16,_U8checkdata
+ 02FA D9DF              rcall _Uart_Transmit
+ 02FC                   .dbline 319
+ 02FC           ;   
+ 02FC           ; 
+ 02FC           ;   Uart_Transmit(U8checkdata); 
+ 02FC 00910A00          lds R16,_U8checkdata
+ 0300 D6DF              rcall _Uart_Transmit
+ 0302                   .dbline 321
+ 0302           ;   //延时2S
+ 0302           ;   for(U8temp=0;U8temp<200;U8temp++)
+ 0302 2224              clr R2
+ 0304 20920F00          sts _U8temp,R2
+ 0308 08C0              rjmp L83
+ 030A           L80:
+ 030A                   .dbline 322
+ 030A                   .dbline 323
+ 030A 0AE0              ldi R16,10
+ 030C 10E0              ldi R17,0
+ 030E 8DDE              rcall _DelaymS
+ 0310                   .dbline 325
+ 0310           L81:
+ 0310                   .dbline 321
+ 0310 80910F00          lds R24,_U8temp
+ 0314 8F5F              subi R24,255    ; addi 1
+ 0316 80930F00          sts _U8temp,R24
+ 031A           L83:
+ 031A                   .dbline 321
+ 031A 80910F00          lds R24,_U8temp
+ 031E 883C              cpi R24,200
+ 0320 A0F3              brlo L80
+ 0322                   .dbline 327
+ 0322           L78:
+ 0322                   .dbline 305
+ 0322 DCCF              rjmp L77
+ 0324           X3:
+ 0324                   .dbline -2
+ 0324           L76:
+ 0324                   .dbline 0 ; func end
+ 0324 0895              ret
+ 0326                   .dbend
+                        .area bss(ram, con, rel)
+ 0000                   .dbfile C:\DOCUME~1\Owner\桌面\C\给客户调试板\DHT21_8M\DHT21_8M\Display_DHTXX.c
+ 0000           _ReceiveLowByte::
+ 0000                   .blkb 2
+ 0002                   .dbsym e ReceiveLowByte _ReceiveLowByte i
+ 0002           _ReceiveHighByte::
+ 0002                   .blkb 2
+ 0004                   .dbsym e ReceiveHighByte _ReceiveHighByte i
+ 0004           _U8comdata::
+ 0004                   .blkb 1
+ 0005                   .dbsym e U8comdata _U8comdata c
+ 0005           _U8checkdata_temp::
+ 0005                   .blkb 1
+ 0006                   .dbsym e U8checkdata_temp _U8checkdata_temp c
+ 0006           _U8RH_data_L_temp::
+ 0006                   .blkb 1
+ 0007                   .dbsym e U8RH_data_L_temp _U8RH_data_L_temp c
+ 0007           _U8RH_data_H_temp::
+ 0007                   .blkb 1
+ 0008                   .dbsym e U8RH_data_H_temp _U8RH_data_H_temp c
+ 0008           _U8T_data_L_temp::
+ 0008                   .blkb 1
+ 0009                   .dbsym e U8T_data_L_temp _U8T_data_L_temp c
+ 0009           _U8T_data_H_temp::
+ 0009                   .blkb 1
+ 000A                   .dbsym e U8T_data_H_temp _U8T_data_H_temp c
+ 000A           _U8checkdata::
+ 000A                   .blkb 1
+ 000B                   .dbsym e U8checkdata _U8checkdata c
+ 000B           _U8RH_data_L::
+ 000B                   .blkb 1
+ 000C                   .dbsym e U8RH_data_L _U8RH_data_L c
+ 000C           _U8RH_data_H::
+ 000C                   .blkb 1
+ 000D                   .dbsym e U8RH_data_H _U8RH_data_H c
+ 000D           _U8T_data_L::
+ 000D                   .blkb 1
+ 000E                   .dbsym e U8T_data_L _U8T_data_L c
+ 000E           _U8T_data_H::
+ 000E                   .blkb 1
+ 000F                   .dbsym e U8T_data_H _U8T_data_H c
+ 000F           _U8temp::
+ 000F                   .blkb 1
+ 0010                   .dbsym e U8temp _U8temp c
+ 0010           _U8count::
+ 0010                   .blkb 1
+ 0011                   .dbsym e U8count _U8count c
+ 0011           _k::
+ 0011                   .blkb 1
+ 0012                   .dbsym e k _k c
+ 0012           _U8FLAG::
+ 0012                   .blkb 1
+ 0013                   .dbsym e U8FLAG _U8FLAG c
+ 0013           _i::
+ 0013                   .blkb 1
+ 0014                   .dbsym e i _i c

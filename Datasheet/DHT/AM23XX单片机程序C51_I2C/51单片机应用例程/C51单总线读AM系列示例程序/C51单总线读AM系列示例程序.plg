@@ -1,0 +1,15 @@
+<html>
+<body>
+<pre>
+<h1>礦ision Build Log</h1>
+<h2>Project:</h2>
+K:\产品描述\AM2320 温湿度传感器 电容式温湿度模块 湿度传感器 温湿度模组\AM23XX单片机程序\51单片机应用例程\C51单总线读AM系列示例程序\C51单总线读AM系列示例程序.uvproj
+Project File Date:  <unknown>
+
+<h2>Output:</h2>
+Build target 'Target 1'
+compiling C51单总线读AM系列示例程序.c...
+linking...
+Program Size: data=33.0 xdata=0 code=1328
+creating hex file from "C51单总线读AM系列示例程序"...
+"C51单总线读AM系列示例程序" - 0 Error(s), 0 Warning(s).
